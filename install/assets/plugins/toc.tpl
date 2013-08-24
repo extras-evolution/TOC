@@ -1,22 +1,21 @@
-<?php
+//<?php
+/**
+ * TOC
+ * 
+ * Плагин для автоматического создания оглавления на странице с помощью якорей.
+ *
+ * @category    plugin
+ * @version     0.9.1b
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU Public License (GPL)
+ * @internal    @properties &lStart=Начальный уровень;list;1,2,3,4,5,6;2 &lEnd=Конечный уровень;list;1,2,3,4,5,6;3 &table_name=Транслитерация;list;common,russian;russian &tocTitle=Название;string;Содержание &tocClass=CSS-класс;string;toc &tocAnchorType=Тип якоря;list;1,2;1 &tocAnchorLen=Максимальная длина якоря;number;0
+ * @internal    @events OnLoadWebDocument
+ * @internal    @modx_category Content
+ * @internal    @legacy_names TOC
+ * @internal    @installset base, sample
+ */
+
 
 /**
- * @name TOC
- * @version 0.9.1b, 15 august 2009
- * @desc Плагин для автоматического создания оглавления на странице с помощью якорей.
- * 
- * @author Максим Мухарев (Carw)
- * @license GNU General Public License
- * 
- * Инструкция:
- * 
- * Создайте новый плагин с именем TOC и с копируйте в него данный код.
- * 
- * Привяжите плагин к системному событию OnLoadWebDocument.
- * 
- * В параметры добавьте следующую информацию:
- * &lStart=Начальный уровень;list;1,2,3,4,5,6;2 &lEnd=Конечный уровень;list;1,2,3,4,5,6;3 &table_name=Транслитерация;list;common,russian;russian &tocTitle=Название;string;Содержание &tocClass=CSS-класс;string;toc &tocAnchorType=Тип якоря;list;1,2;1 &tocAnchorLen=Максимальная длина якоря;number;0
- * 
  * Имеющиеся параметры:
  * 
  * Начальный уровень - начальный уровень заголовка (H1 - H6)
@@ -189,5 +188,3 @@ if(count($hArray) > 0) {
 }
 
 return;
-
-?>
