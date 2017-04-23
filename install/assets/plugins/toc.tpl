@@ -5,7 +5,7 @@
  * Плагин для автоматического создания оглавления на странице с помощью якорей.
  *
  * @category    plugin
- * @version     0.9.1b
+ * @version     0.9.2
  * @license     http://www.gnu.org/copyleft/gpl.html GNU Public License (GPL)
  * @internal    @properties &lStart=Начальный уровень;list;1,2,3,4,5,6;2 &lEnd=Конечный уровень;list;1,2,3,4,5,6;3 &table_name=Транслитерация;list;common,russian;russian &tocTitle=Название;string;Содержание &tocClass=CSS-класс;string;toc &tocAnchorType=Тип якоря;list;1,2;1 &tocAnchorLen=Максимальная длина якоря;number;0
  * @internal    @events OnLoadWebDocument
@@ -13,7 +13,6 @@
  * @internal    @legacy_names TOC
  * @internal    @installset base, sample
  */
-
 
 /**
  * Имеющиеся параметры:
@@ -37,6 +36,8 @@
  * - оглавление создается во всех шаблонах, даже там где не используется
  */
 
+if(!defined('MODX_BASE_PATH')){die('What are you doing? Get out of here!');}
+
 global $modx;
 
 $lStart = isset($lStart) ? $lStart : 2;
@@ -48,7 +49,7 @@ $tocAnchorLen = (isset($tocAnchorLen) and ($tocAnchorLen > 0)) ? $tocAnchorLen :
 /**
  * Транслитерация
  */
-$plugin_path = $modx->config['base_path'].'assets/plugins/transalias';
+$plugin_path = MODX_BASE_PATH.'assets/plugins/transalias';
 $table_name = isset($table_name) ? $table_name : 'russian';
 
 if (!class_exists('TransAlias')) {
@@ -103,9 +104,9 @@ for($i=0;$i<$contLen; $i++) {
                                 $hArray[$i]["anchor"] = $i;
                         } elseif ($tocAnchorType == 1) {
                                 
-                                if ($trans->loadTable($table_name)) {
+                                if ($trans->loadTable($table_name,'Yes')) {
                                         // создаем название якоря путем транслитерации заголовка
-                                        $anchorName = $trans->stripAlias($h);
+                                        $anchorName = $trans->stripAlias($h,'lowercase alphanumeric','-');
                                         // Если задано ограничение длины, то обрезаем.
                                         if($tocAnchorLen > 0) {
                                                 $anchorName = substr($anchorName,0,$tocAnchorLen);
@@ -130,7 +131,7 @@ for($i=0;$i<$contLen; $i++) {
         } else {
                 $i = $hPosBegin + 5;
         }
-        
+	
 }
 
 // Создаем само оглавление
@@ -184,7 +185,7 @@ if(count($hArray) > 0) {
         
         // записываем оглавление в плейсхолдер [+toc+]
         $modx->setPlaceholder('toc',$tocResult);
-        
+       
 }
 
 return;
