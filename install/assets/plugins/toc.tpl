@@ -5,7 +5,7 @@
  * Plugin for automatically creating a table of contents on a page using anchors.
  *
  * @category    plugin
- * @version     0.9.4
+ * @version     0.9.5
  * @license     http://www.gnu.org/copyleft/gpl.html GNU Public License (GPL)
  * @internal    @properties &lStart=Start level;list;1,2,3,4,5,6;2 &lEnd=End level;list;1,2,3,4,5,6;3 &table_name=Transliteration;list;common,russian;common &tocTitle=Title;string;Contents &tocClass=CSS class;string;toc &tocAnchorType=Anchor type;list;1,2;1 &tocAnchorLen=Maximum anchor length;number;0 &exclude_docs=Exclude Documents by id (comma separated);string; &exclude_templates=Exclude Templates by id (comma separated);string;
  * @internal    @events OnLoadWebDocument
@@ -24,6 +24,8 @@
  * CSS class - the style class that will be used in the table of contents (container and nested levels)
  * Anchor type - different variants of generating the anchor name. 1 - transliteration, 2 - numeration
  * Maximum anchor length - used in transliteration and limits the length of the anchor name
+ * Exclude Documents by id - A comma separated list of documents id to exclude from the plugin and TOC generation
+ * Exclude Templates by id - A comma separated list of templates id to exclude from the plugin and TOC generation
  *
  * Usage:
  *
@@ -33,7 +35,8 @@
  *
  * - large gaps in nesting levels (e.g., H1 - H3) insert extra closing tags
  * - the table of contents is cached, but it does not take into account dynamically added headings
- * - the table of contents is created in all templates, even where it is not used
+ * - the table of contents is created in all templates, even where it is not used (*)
+ * - (*) from version 0.9.4 you can exclude templates and documents
  */
 
 if(!defined('MODX_BASE_PATH')){die('What are you doing? Get out of here!');}
@@ -142,62 +145,53 @@ for($i=0;$i<$contLen; $i++) {
 
 // Create the table of contents
 if(count($hArray) > 0) {
-        
-        // set the current heading level to 0
-        $curLev = 0;
-        
-        // parse the array with headings
-        foreach ($hArray as $key => $value) {
-                
-                if($curLev == 0) {
-                        // if the current heading level is 0, we need to add the main container
-                        $tocResult .= '<ul class="' . $tocClass . '_' . $value['level'] . '">';
-                } elseif($curLev != $value['level']) {
-                        // if the current heading level is not equal to the level of the new item, we need to process the level change.
-                       if($curLev < $value['level']) {
-                                // The current level is higher, so these are nested items and we need a new container
-                                $tocResult .= '<ul class="lev2 ' . $tocClass . '_' . $value['level'] . '">';
-
-                        } else {
-                                 // The current level is lower, so the nested items are finished
-                                $tocResult .= str_repeat('</li></ul>',$curLev - $value['level']);
-                        }
-                        
-                } else {
-                       // the next item is at the same level, so we need to close the previous one
-                        $tocResult .= '</li>';
-                }
-                
-                $id = $modx->documentIdentifier;
-                $url = $modx->makeUrl($id,'','','full');
-                
-                 // create a table of contents item
-				$curLev = $value['level'];
-				if($curLev == $lStart) {
-					    $tocResult .= '<li class="TocTop"><a href="' . $url . '#' . $value['anchor'] . '">' . strip_tags($value['header_in']) . '</a>';
-
-                } else {
-                $tocResult .= '<li><a href="' . $url . '#' . $value['anchor'] . '">' . strip_tags($value['header_in']) . '</a>';
-                }
+    $curLev = 0;
+    $openLiCount = 0; // keeps trace of open <li> 
+    
+    foreach ($hArray as $key => $value) {
+        if($curLev == 0) {
+            $tocResult .= '<ul class="' . $tocClass . '_' . $value['level'] . '">';
+        } elseif($curLev != $value['level']) {
+            if($curLev < $value['level']) {
+                $tocResult .= '<ul class="lev2 ' . $tocClass . '_' . $value['level'] . '">';
+            } else {
+                // Close all the <li> and <ul> needed when they go down
+                $tocResult .= str_repeat('</li></ul>', $curLev - $value['level']);
+                $openLiCount -= ($curLev - $value['level']); // Update the <li> count
+            }
+        } else {
+            $tocResult .= '</li>';
+            $openLiCount--;
         }
         
-        // close all lists, taking into account the current nesting level
-        $tocResult .= str_repeat('</li>',$curLev - $lStart) . '</ul>';
+        $id = $modx->documentIdentifier;
+        $url = $modx->makeUrl($id,'','','full');
         
-        // If the table of contents has a title, wrap it in a span with a class so it can be styled
-        if($tocTitle != '') {
-                $tocTitle = '<span class="title">' . $tocTitle . '</span>';
+        // Add the new <li>
+        $curLev = $value['level'];
+        if($curLev == $lStart) {
+            $tocResult .= '<li class="TocTop"><a href="' . $url . '#' . $value['anchor'] . '">' . strip_tags($value['header_in']) . '</a>';
+        } else {
+            $tocResult .= '<li><a href="' . $url . '#' . $value['anchor'] . '">' . strip_tags($value['header_in']) . '</a>';
         }
-        
-        // wrap in a container div with the specified class
-        $tocResult = '<div class="' . $tocClass . '">' . $tocTitle . $tocResult . '</div>';
-        
-        // change the previous content
-        $modx->documentObject['content'] = $cont;
-        
-        // save the table of contents in the [+toc+] placeholder
-        $modx->setPlaceholder('toc',$tocResult);
-       
-	}
+        $openLiCount++; // increases the <li> count
+    }
+    
+    // correctly close all the remaining tags
+    if($openLiCount > 0) {
+        $tocResult .= str_repeat('</li>', $openLiCount);
+    }
+    $tocResult .= str_repeat('</ul>', $curLev > 0 ? $curLev - $lStart + 1 : 1);
+
+    // Add the title if present
+    if($tocTitle != '') {
+        $tocTitle = '<span class="title">' . $tocTitle . '</span>';
+    }
+    
+    $tocResult = '<div class="' . $tocClass . '">' . $tocTitle . $tocResult . '</div>';
+    
+    $modx->documentObject['content'] = $cont;
+    $modx->setPlaceholder('toc', $tocResult);
+}
 }
 return;
